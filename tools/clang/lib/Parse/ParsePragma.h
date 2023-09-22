@@ -121,6 +121,16 @@ public:
                             Token &FirstToken);
 };
 
+class PragmaOverflowCheckHandler : public PragmaHandler {
+public:
+  PragmaOverflowCheckHandler() : PragmaHandler(
+    /*match the name in usage such that it can be found by Handlers.lookup()*/
+    "overflowCheck"
+    ) { }
+  virtual void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+                            Token &FirstToken);
+};
+
 }  // end namespace clang
 
 #endif

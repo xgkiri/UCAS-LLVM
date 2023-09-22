@@ -180,7 +180,14 @@ void Parser::HandlePragmaOpenCLExtension() {
   }
 }
 
-
+/*
+TODO:
+void Parser::HandlePragmaOverflowCheck() {
+  assert(Tok.is(tok::annot_pragma_overflowcheck));
+  Actions.ActOnPragmaOverFlowCheck();
+  ConsumeToken(); // The annotation token.
+}
+*/
 
 // #pragma GCC visibility comes in two variants:
 //   'push' '(' [visibility] ')'
@@ -857,4 +864,16 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
   // If the pragma is lexically sound, notify any interested PPCallbacks.
   if (PP.getPPCallbacks())
     PP.getPPCallbacks()->PragmaComment(CommentLoc, II, ArgumentString);
+}
+
+void PragmaOverflowCheckHandler::HandlePragma(Preprocessor &PP,
+                                        PragmaIntroducerKind Introducer,
+                                        Token &FirstTok) {
+  Token Tok;
+  Tok.startToken();
+  Tok.setKind(tok::annot_pragma_overflow_check);
+  Tok.setLocation(FirstTok.getLocation());
+
+  PP.EnterTokenStream(&Tok, 1,
+                      /*DisableMacroExpansion=*/true, /*OwnsTokens=*/false);
 }
