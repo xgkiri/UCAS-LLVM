@@ -649,6 +649,9 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   case tok::annot_pragma_openmp:
     ParseOpenMPDeclarativeDirective();
     return DeclGroupPtrTy();
+  case tok::annot_pragma_overflow_check:
+    HandlePragmaOverflowCheck();
+    return DeclGroupPtrTy();
   case tok::semi:
     // Either a C++11 empty-declaration or attribute-declaration.
     SingleDecl = Actions.ActOnEmptyDeclaration(getCurScope(),

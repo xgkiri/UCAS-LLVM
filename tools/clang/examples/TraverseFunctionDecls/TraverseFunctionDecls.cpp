@@ -37,7 +37,7 @@ public:
         if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DeclNode)) {
             std::string name = FD -> getNameAsString();
 //Place to modify
-            unsigned rule = 0;
+            unsigned rule = FD->getOverflowCheck();
             //unsigned rule = FD -> getAsCheckRule();
             funcNamesToAsCheckRule[FD->getNameAsString()] = rule;
 /*

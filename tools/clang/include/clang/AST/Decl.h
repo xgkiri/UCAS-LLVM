@@ -1409,6 +1409,7 @@ private:
   bool HasImplicitReturnZero : 1;
   bool IsLateTemplateParsed : 1;
   bool IsConstexpr : 1;
+  bool IsOverflowCheck : 1;
 
   /// \brief Indicates if the function was a definition but its body was
   /// skipped.
@@ -1480,6 +1481,16 @@ private:
                                         TemplateSpecializationKind TSK);
 
   void setParams(ASTContext &C, ArrayRef<ParmVarDecl *> NewParamInfo);
+
+public:
+  // set & get overflow check sign
+  void setOverflowCheck(bool flag) {
+    IsOverflowCheck = flag;
+  }
+
+  bool getOverflowCheck() const {
+    return IsOverflowCheck;
+  }
 
 protected:
   FunctionDecl(Kind DK, DeclContext *DC, SourceLocation StartLoc,

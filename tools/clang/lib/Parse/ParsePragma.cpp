@@ -180,14 +180,13 @@ void Parser::HandlePragmaOpenCLExtension() {
   }
 }
 
-/*
-TODO:
+
 void Parser::HandlePragmaOverflowCheck() {
-  assert(Tok.is(tok::annot_pragma_overflowcheck));
+  assert(Tok.is(tok::annot_pragma_overflow_check));
   Actions.ActOnPragmaOverFlowCheck();
   ConsumeToken(); // The annotation token.
 }
-*/
+
 
 // #pragma GCC visibility comes in two variants:
 //   'push' '(' [visibility] ')'
@@ -873,7 +872,7 @@ void PragmaOverflowCheckHandler::HandlePragma(Preprocessor &PP,
   Tok.startToken();
   Tok.setKind(tok::annot_pragma_overflow_check);
   Tok.setLocation(FirstTok.getLocation());
-
+  // TODO: call Sema::ActOnPragmaOverFlowCheck() here? 
   PP.EnterTokenStream(&Tok, 1,
                       /*DisableMacroExpansion=*/true, /*OwnsTokens=*/false);
 }

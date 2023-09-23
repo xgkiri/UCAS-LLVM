@@ -205,6 +205,8 @@ class Sema {
   ///\brief Whether Sema has generated a multiplexer and has to delete it.
   bool isMultiplexExternalSource;
 
+  bool overflowCheckPragmaOn;
+
   static bool mightHaveNonExternalLinkage(const DeclaratorDecl *FD);
 
   static bool
@@ -6668,6 +6670,8 @@ public:
                       unsigned SpellingListIndex, bool IsPackExpansion);
   void AddAlignedAttr(SourceRange AttrRange, Decl *D, TypeSourceInfo *T,
                       unsigned SpellingListIndex, bool IsPackExpansion);
+
+  void ActOnPragmaOverFlowCheck();
 
   // OpenMP directives and clauses.
 

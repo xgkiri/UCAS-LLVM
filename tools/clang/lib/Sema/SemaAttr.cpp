@@ -418,3 +418,7 @@ void Sema::PopPragmaVisibility(bool IsNamespaceEnd, SourceLocation EndLoc) {
   if (Stack->empty())
     FreeVisContext();
 }
+
+void Sema::ActOnPragmaOverFlowCheck() {
+  overflowCheckPragmaOn = true;  
+}
