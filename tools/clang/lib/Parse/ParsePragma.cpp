@@ -868,11 +868,11 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
 void PragmaOverflowCheckHandler::HandlePragma(Preprocessor &PP,
                                         PragmaIntroducerKind Introducer,
                                         Token &FirstTok) {
+  PP.Lex(FirstTok);
   Token Tok;
   Tok.startToken();
   Tok.setKind(tok::annot_pragma_overflow_check);
   Tok.setLocation(FirstTok.getLocation());
-  // TODO: call Sema::ActOnPragmaOverFlowCheck() here? 
   PP.EnterTokenStream(&Tok, 1,
                       /*DisableMacroExpansion=*/true, /*OwnsTokens=*/false);
 }
