@@ -22,6 +22,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Frontend/CodeGenOptions.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
@@ -2366,8 +2367,94 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
     if (getLangOpts().isSignedOverflowDefined())
       Address = Builder.CreateGEP(ArrayPtr, Args, "arrayidx");
-    else
+    else {
+      // PR002 Modified
+      const FunctionDecl* FD = cast<FunctionDecl>(CurGD.getDecl());
+      if (FD->getOverflowCheck()) {
+        // if __assert_fail is not in module, insert it
+        if (!CGM.getModule().getFunction("__assert_fail")) {
+          // create __assert_fail arguments type
+          SmallVector<llvm::Type*, 4> FuncAssertFailTyArgs;
+          FuncAssertFailTyArgs.push_back(llvm::Type::getInt8PtrTy(getLLVMContext()));
+          FuncAssertFailTyArgs.push_back(llvm::Type::getInt8PtrTy(getLLVMContext()));
+          FuncAssertFailTyArgs.push_back(llvm::Type::getInt32Ty(getLLVMContext()));
+          FuncAssertFailTyArgs.push_back(llvm::Type::getInt8PtrTy(getLLVMContext()));
+          // create __assert_fail function type
+          llvm::FunctionType *FuncAssertFailTy = llvm::FunctionType::get(
+          /*Result=*/llvm::Type::getVoidTy(getLLVMContext()),
+          /*Params=*/FuncAssertFailTyArgs,
+          /*isVarArg=*/false
+          );
+          // create __assert_fail function
+          CGM.getModule().getOrInsertFunction("__assert_fail", FuncAssertFailTy);
+        }
+
+        llvm::Value *LHS = Idx;
+        // get array size
+        const ConstantArrayType *ArrayTy = getContext().getAsConstantArrayType(Array->getType());
+        llvm::APInt ArraySize = ArrayTy->getSize();
+        const uint64_t *Size = ArraySize.getRawData();
+        // create RHS
+        llvm::Value *RHS = llvm::ConstantInt::get(Idx->getType(), *Size);
+        llvm::BasicBlock *ThenBlock = createBasicBlock("if.then");
+        llvm::BasicBlock *ContBlock = createBasicBlock("if.end");
+        llvm::Value *Cond = Builder.CreateICmpSGE(LHS, RHS);
+        // create IfStmt
+        Builder.CreateCondBr(Cond, ThenBlock, ContBlock);
+        // Emit the 'then' code.
+        EmitBlock(ThenBlock);
+        { 
+            // AstPtr
+            SourceManager& SM = CGM.getContext().getSourceManager();
+            SourceLocation IdxLocStart = SM.getSpellingLoc(E->getIdx()->getLocStart());
+            SourceLocation IdxLocEnd = SM.getSpellingLoc(E->getIdx()->getLocEnd());
+            CharSourceRange IdxCSR(SourceRange(IdxLocStart, IdxLocEnd), false);
+            StringRef IdxName =
+                Lexer::getSourceText(IdxCSR, SM, CGM.getContext().getLangOpts());
+            std::string Dirty = "";
+            for (StringRef::iterator i = IdxName.begin(); i <= IdxName.end(); i++) {
+                Dirty += *i;
+            }
+            llvm::Value* AstPtr =
+                Builder.CreateGlobalStringPtr(
+                    Dirty + " < " + ArraySize.toString(10, false) +
+                        ", OverflowCheck Failed!",
+                    "assertion");
+            // FilePtr
+            SourceLocation SpellingLoc = SM.getSpellingLoc(E->getLocStart());
+            StringRef FileName = SM.getFilename(SpellingLoc);
+            std::string FileNameStr(FileName.str() + "_STR");
+            if (!CGM.getModule().getNamedValue(FileNameStr)) {
+                Builder.CreateGlobalString(FileName, FileNameStr);
+            }
+            llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(getLLVMContext()), 0);
+            llvm::Value* Args[] = {zero, zero};
+            llvm::Value* FilePtr = Builder.CreateInBoundsGEP(CGM.getModule().getNamedValue(FileNameStr), Args);
+            // FuncPtr
+            StringRef FuncName = FD->getNameAsString();
+            std::string FunNameStr(FileName.str() + "_STR");
+            if (!CGM.getModule().getNamedValue(FunNameStr)) {
+                Builder.CreateGlobalString(FuncName, FunNameStr);
+            }
+            llvm::Value* FuncPtr = Builder.CreateInBoundsGEP(CGM.getModule().getNamedValue(FunNameStr), Args);
+            // Line
+            uint32_t LineNum = SM.getPresumedLineNumber(IdxLocStart);
+            llvm::Value* Line = llvm::ConstantInt::get(llvm::Type::getInt32Ty(getLLVMContext()), LineNum);
+
+            llvm::Value* AssertFailArgs[] = {
+                /*__assertion=*/AstPtr,
+                /*__file=*/FilePtr,
+                /*__line=*/Line,
+                /*__function=*/FuncPtr};
+
+            Builder.CreateCall(CGM.getModule().getFunction("__assert_fail"), AssertFailArgs);
+        }
+        EmitBranch(ContBlock);
+        // Emit the continuation block for code after the if.
+        EmitBlock(ContBlock, true);
+      }
       Address = Builder.CreateInBoundsGEP(ArrayPtr, Args, "arrayidx");
+    }
   } else {
     // The base must be a pointer, which is not an aggregate.  Emit it.
     llvm::Value *Base = EmitScalarExpr(E->getBase());
