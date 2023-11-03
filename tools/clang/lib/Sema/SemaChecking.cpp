@@ -5898,8 +5898,13 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     }
 
     unsigned DiagID = diag::warn_ptr_arith_exceeds_bounds;
-    if (ASE)
-      DiagID = diag::warn_array_index_exceeds_bounds;
+    if (ASE) {
+      if (overflowCheckPragmaOn) {
+        DiagID = diag::err_array_index_exceeds_bounds;
+      } else {
+        DiagID = diag::warn_array_index_exceeds_bounds;
+      }
+    }
 
     DiagRuntimeBehavior(BaseExpr->getLocStart(), BaseExpr,
                         PDiag(DiagID) << index.toString(10, true)

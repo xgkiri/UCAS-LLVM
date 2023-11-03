@@ -5766,6 +5766,10 @@ def warn_array_index_exceeds_bounds : Warning<
 def note_array_index_out_of_bounds : Note<
   "array %0 declared here">;
 
+def err_array_index_exceeds_bounds : Error<
+  "array index %0 is past the end of the array (which contains %1 "
+  "element%s2)">;  
+
 def warn_printf_insufficient_data_args : Warning<
   "more '%%' conversions than data arguments">, InGroup<Format>;
 def warn_printf_data_arg_not_used : Warning<
